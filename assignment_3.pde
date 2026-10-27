@@ -1,173 +1,157 @@
+/*
+  Chizzy
+ I'm making a block breaker type game that I saw on google
+ 
+ The mechanics in this game will be
+ - Moving paddle that can hit the moving ball
+ - Rectangles that will increase the player's score if hit
+ - Score
+ - Retry button
+ 
+ */
+
+// References
+
 // Variables
-int buttonY = 400;
-int buttonWidth = 125, buttonHeight = 60;
+boolean roundStarted = false;
+boolean ballInPlay = false;
 
-// Score
-int startTime = 0;
-int timerDuration = 10;
-int scoreTimerLeft = timerDuration;
-int score = 0;
+boolean leftPressed = false;
+boolean rightPressed = false;
 
-// ButtonX Size
-int easyButtonX = 70;
-int mediumButtonX = 240;
-int hardButtonX = 405;
+// Buttons
+int startButtonX = 125, startButtonY = 340, startButtonWidth = 350, startButtonHeight = 100;
+int paddleX = 200, paddleY = 480, paddleWidth = 150, paddleHeight = 15;
 
-// Gameplay vars
-String modeOfChoice = "";
-boolean selectedMode = false;
-boolean gameOver = false;
+// Bouncing ball
+int ballX = paddleX + paddleWidth / 2, ballY = paddleY - 25, ballRadius = 25;
 
-String correctAnswer;
-char randomLetter;
+// Blocks
+int blockX, blockY, blockWidth = 75, blockHeight = 20, blockRadius = 10;
+
+// Configurations
+int screenWidth = 600, screenHeight = 600;
+int paddleSpeed = 10;
+float ballSpeedX = 4, ballSpeedY = 4;
 
 void setup() {
   size(600, 600);
-  background(50);
+  background(20);
+}
 
-  startTime = millis();
+// Handles ball movement and collision
+void updateBall() {
+  ballX += ballSpeedX;
+  ballY += ballSpeedY;
+
+  if (ballX - ballRadius < 0) {
+    ballX = ballRadius;
+    ballSpeedX *= -1;
+  }
+  if (ballX + ballRadius > screenWidth) {
+    ballX = screenWidth - ballRadius;
+    ballSpeedX *= -1;
+  }
+
+  if (ballY - ballRadius < 0) {
+    ballY = ballRadius;
+    ballSpeedY *= -1;
+  }
+
+  // Ball and paddle collision
+  if (ballX >= paddleX && ballX <= paddleX + paddleWidth &&
+    ballY + ballRadius >= paddleY && ballY <= paddleY + paddleHeight && ballSpeedY > 0) {
+
+    float paddleCenterX = paddleX + (paddleWidth / 2.0);
+    float hitOffset = ballX - paddleCenterX;
+    float normalizedHit = hitOffset / (paddleWidth / 2.0);
+
+    // Set horizontal speed based on hit location (Outer edges = sharper angle)
+    float maxHorizontalSpeed = 6.0;
+    ballSpeedX = normalizedHit * maxHorizontalSpeed;
+
+    // Force vertical speed to bounce UP
+    float upwardSpeed = 4.5;
+    ballSpeedY = -upwardSpeed;
+
+    ballY = paddleY - ballRadius;
+  }
+
+  // 4. Bottom wall (Lose life / Reset)
+  if (ballY + ballRadius > screenHeight) {
+    println("Ball past the screen height!");
+    //resetBall();
+  }
 }
 
 void draw() {
+  // Title
+  textSize(64);
+  fill(255);
+  text("Block Breaker", 125, 100);
 
-  if (!gameOver) {
+  rect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 15);
+  textSize(55);
+  fill(0);
+  text("Start", 235, 410);
+
+  // Starting the game
+  if (roundStarted) {
+    background(20);
+
+    // Create the paddle
     fill(255);
-    textSize(40);
-    text("Typing test. Select a difficulty", 50, 100);
-  
-    // Creating buttons \\
-  
-    // Easy button
-    fill(233, 255, 31);
-    rect(easyButtonX, buttonY, buttonWidth, buttonHeight);
-    textSize(40);
-    fill(0);
-    text("Easy", 90, 440);
-  
-    // Medium button
-    fill(56, 220, 229);
-    rect(mediumButtonX, buttonY, buttonWidth, buttonHeight);
-    textSize(38);
-    fill(0);
-    text("Medium", 240, 440);
-  
-    // Hard button
-    fill(255, 34, 31);
-    rect(hardButtonX, buttonY, buttonWidth, buttonHeight);
-    fill(0);
-    text("Hard", 430, 440);
+    rect(paddleX, paddleY, paddleWidth, paddleHeight, 15);
+
+    // Create the ball
+    circle(ballX, ballY, ballRadius);
   }
 
-  // Player has selected a mode
-  if (selectedMode) {
-
-    if (modeOfChoice == "Easy") {
-      background(230, 236, 50);
-    } else if (modeOfChoice == "Medium") {
-      background(45, 195, 240);
-    } else if (modeOfChoice == "Hard") {
-      background(222, 63, 74);
-    }
-    fill(0);
-
-    // Timer
-    
-    // Time over
-    scoreTimerLeft =  timerDuration - (millis() - startTime) / 1000;
-    
-    if (scoreTimerLeft < 0) {
-      scoreTimerLeft = 0;
-      gameOver = true;
-      fill(120);
-      
-      background(183, 72, 182);
-      textSize(64);
-      fill(0);
-      
-      // Game over text
-      text("Game Over!", 125, 100);
-      textSize(50);
-      text("Score: " + score, 175, 400);
-      
-    } else {
-      fill(240, 10, 10);
-      textSize(32);
-      text(scoreTimerLeft, 100, 500);
-      
-      // Key still needs to be pressed
-      textSize(60);
-      fill(0);
-      text("Press this key.", 130, 100);
-
-      textSize(90);
-      fill(0);
-      text(Character.toLowerCase(randomLetter), 275, 300);
-    }
-
+  // Paddle movement
+  if (rightPressed && paddleX < screenWidth - paddleWidth) {
+    paddleX += paddleSpeed;
   }
-  if (selectedMode && correctAnswer == "no") {
-    background(240, 10, 20);
-    textSize(72);
-    text("Wrong Answer! :(", 50, 100);
+
+  if (leftPressed && paddleX > 0) {
+    paddleX -= paddleSpeed;
+  }
+
+  if (roundStarted) {
+    updateBall();
+  }
+}
+
+// Paddle movement
+void keyPressed() {
+
+  // Move the paddle right
+  if (key == 'd' || key == RIGHT) {
+    rightPressed = true;
+  } else if (key == 'a' || key == LEFT) {
+    // Move it left
+    leftPressed = true;
+    println(leftPressed);
+  }
+}
+
+void keyReleased() {
+  if (key == 'a' || key == LEFT) {
+    leftPressed = false;
+  } else if (key == 'd' || key == RIGHT) {
+    rightPressed = false;
   }
 }
 
 void mousePressed() {
-  // Already chose a mode, so no need for mouse input
-  if (modeOfChoice != "") {
-    modeOfChoice = modeOfChoice;
+  if (roundStarted) {
     return;
   }
-
-  // Pressed easy button
-  if (mouseX >= easyButtonX &&
-    mouseX <= easyButtonX + buttonWidth &&
-    mouseY >= buttonY &&
-    mouseY <= buttonY + buttonHeight)
-  {
-    modeOfChoice = "Easy";
-
-    randomLetter = (char) random('a', 'g' + 1);
-  } else if (mouseX >= mediumButtonX &&
-    mouseX <= mediumButtonX + buttonWidth &&
-    mouseY >= buttonY &&
-    mouseY <= buttonY + buttonHeight)
-  {
-    modeOfChoice = "Medium";
-    randomLetter = (char) random('g', 'n' + 1);
-  } else if (mouseX >= hardButtonX &&
-    mouseX <= hardButtonX + buttonWidth &&
-    mouseY >= buttonY &&
-    mouseY <= buttonY + buttonHeight)
-  {
-    modeOfChoice = "Hard";
-    randomLetter = (char) random('n', 'z' + 1);
-  } else {
-    return;
-  }
-  selectedMode = true;
-}
-
-void keyPressed() {
-  if (correctAnswer == "no") {
-   return;
-  }
-  if (selectedMode && Character.toLowerCase(key) == Character.toLowerCase(randomLetter)) {
-    correctAnswer = "yes";
-    score++;
-
-    // Generate the next random letter
-    if (modeOfChoice == "Hard") {
-      randomLetter = (char) random('n', 'z' + 1);
-    } else if (modeOfChoice == "Medium") {
-      randomLetter = (char) random('g', 'n' + 1);
-    } else if (modeOfChoice == "Easy") {
-      randomLetter = (char) random('a', 'g' + 1);
-    }
-  } else if (selectedMode && Character.toLowerCase(key) != Character.toLowerCase(randomLetter)) {
-    correctAnswer = "no";
-    gameOver = true;
-    
-    modeOfChoice = "";
+  if (mouseX >= startButtonX &&
+    mouseX <= startButtonX + startButtonWidth &&
+    mouseY >= startButtonY &&
+    mouseY <= startButtonY + startButtonHeight) {
+    println("Player pressed the start button");
+    roundStarted = true;
   }
 }
+
