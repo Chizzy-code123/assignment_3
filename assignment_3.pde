@@ -27,32 +27,51 @@ int paddleX = 200, paddleY = 480, paddleWidth = 150, paddleHeight = 15;
 int ballX = paddleX + paddleWidth / 2, ballY = paddleY - 25, ballRadius = 25;
 
 // Blocks
-int blockX, blockY, blockWidth = 75, blockHeight = 20, blockRadius = 10;
+int startBlockX = 40, startBlockY = 40;
+int blockX = startBlockX, blockY = startBlockY, blockWidth = 75, blockHeight = 20, blockRadius = 10;
+boolean blocksLoaded = false;
 
 // Configurations
 int screenWidth = 600, screenHeight = 600;
 int paddleSpeed = 10;
 float ballSpeedX = 4, ballSpeedY = 4;
 
+int blockMaxCount = 28;
+int blockRows = 4;
+int blockColumns = 7;
+int blockSpacingX = 75, blockSpacingY = 20;
+int blockCount;
+
+boolean[] blockAlive = new boolean[28];
+
 void setup() {
   size(600, 600);
   background(20);
+
+  for (int i = 0; i < blockMaxCount; i++) {
+    blockAlive[i] = true;
+  }
 }
 
 // Handles ball movement and collision
 void updateBall() {
+  // Moving the ball
   ballX += ballSpeedX;
   ballY += ballSpeedY;
 
+  // Ball hitting the left wall
   if (ballX - ballRadius < 0) {
     ballX = ballRadius;
     ballSpeedX *= -1;
   }
+
+  // Ball hitting the right wall
   if (ballX + ballRadius > screenWidth) {
     ballX = screenWidth - ballRadius;
     ballSpeedX *= -1;
   }
 
+  // Hitting the top
   if (ballY - ballRadius < 0) {
     ballY = ballRadius;
     ballSpeedY *= -1;
@@ -66,22 +85,26 @@ void updateBall() {
     float hitOffset = ballX - paddleCenterX;
     float normalizedHit = hitOffset / (paddleWidth / 2.0);
 
-    // Set horizontal speed based on hit location (Outer edges = sharper angle)
     float maxHorizontalSpeed = 6.0;
     ballSpeedX = normalizedHit * maxHorizontalSpeed;
 
-    // Force vertical speed to bounce UP
     float upwardSpeed = 4.5;
     ballSpeedY = -upwardSpeed;
 
     ballY = paddleY - ballRadius;
   }
 
-  // 4. Bottom wall (Lose life / Reset)
   if (ballY + ballRadius > screenHeight) {
-    println("Ball past the screen height!");
-    //resetBall();
+    resetBall();
   }
+}
+
+void resetBall() {
+  paddleX = 200;
+  paddleY = 480;
+
+  ballX = paddleX + paddleWidth / 2;
+  ballY = paddleY - 25;
 }
 
 void draw() {
@@ -95,18 +118,6 @@ void draw() {
   fill(0);
   text("Start", 235, 410);
 
-  // Starting the game
-  if (roundStarted) {
-    background(20);
-
-    // Create the paddle
-    fill(255);
-    rect(paddleX, paddleY, paddleWidth, paddleHeight, 15);
-
-    // Create the ball
-    circle(ballX, ballY, ballRadius);
-  }
-
   // Paddle movement
   if (rightPressed && paddleX < screenWidth - paddleWidth) {
     paddleX += paddleSpeed;
@@ -119,6 +130,64 @@ void draw() {
   if (roundStarted) {
     updateBall();
   }
+  // Starting the game
+  if (roundStarted) {
+    background(20);
+    // Create the paddle
+    fill(255);
+    rect(paddleX, paddleY, paddleWidth, paddleHeight, 15);
+
+    // Create the ball
+    circle(ballX, ballY, ballRadius);
+
+    // Load the blocks
+    for (int i = 0; i <= blockMaxCount - 1; i++) {
+
+      int col = i % blockColumns;
+      int row = i / blockColumns;
+
+      int x = 40 + col * blockSpacingX;
+      int y = 40 + row * (blockHeight + 10);
+
+      fill(210, 198, 45);
+
+      if (i > 0 && i < 7) {
+        fill(210, 198, 45);
+      } else if (i > 0 && i < 14) {
+        fill(0, 133, 18);
+      } else if (i > 0 && i < 21) {
+        fill(255, 59, 59);
+      } else if (i > 0 && i < 28) {
+        fill(42, 128, 209);
+      }
+
+      rect(
+        x,
+        y,
+        blockWidth,
+        blockHeight,
+        10
+        );
+
+      // Collision with the ball
+      if (
+        ballX + ballRadius > x &&
+        ballX - ballRadius < x + blockWidth &&
+        ballY + ballRadius > y &&
+        ballY - ballRadius < y + blockHeight
+        ) {
+
+        // Bounce the ball
+        ballSpeedY = -ballSpeedY;
+
+        // Destroy the block
+        blockAlive[i] = false;
+
+        // Stop checking blocks for this frame
+        break;
+      }
+    }
+  }
 }
 
 // Paddle movement
@@ -130,7 +199,6 @@ void keyPressed() {
   } else if (key == 'a' || key == LEFT) {
     // Move it left
     leftPressed = true;
-    println(leftPressed);
   }
 }
 
@@ -150,8 +218,6 @@ void mousePressed() {
     mouseX <= startButtonX + startButtonWidth &&
     mouseY >= startButtonY &&
     mouseY <= startButtonY + startButtonHeight) {
-    println("Player pressed the start button");
     roundStarted = true;
   }
 }
-
