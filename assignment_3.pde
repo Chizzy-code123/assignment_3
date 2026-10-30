@@ -1,13 +1,12 @@
 /*
-  Chizzy
- I'm making a block breaker type game that I saw on google
- 
- The mechanics in this game will be
- - Moving paddle that can hit the moving ball
- - Rectangles that will increase the player's score if hit
- - Score
- - Retry button
- 
+   Chizzy
+   I'm making a block breaker type game that I saw on google
+   
+   The mechanics in this game will be
+   - Moving paddle that can hit the moving ball
+   - Rectangles that will increase the player's score if hit
+   - Score
+   - Retry button
  */
 
 // References
@@ -35,6 +34,10 @@ boolean blocksLoaded = false;
 int screenWidth = 600, screenHeight = 600;
 int paddleSpeed = 10;
 float ballSpeedX = 4, ballSpeedY = 4;
+
+boolean blockCollisionDebounce = false;
+float lastBlockCollision;
+float collisionCooldown = 250;
 
 int blockMaxCount = 28;
 int blockRows = 4;
@@ -107,6 +110,12 @@ void resetBall() {
   ballY = paddleY - 25;
 }
 
+void resetBlocks() {
+  for (int i = 0; i < blockMaxCount; i++) {
+   blockAlive[i] = true; 
+  }
+}
+
 void draw() {
   // Title
   textSize(64);
@@ -126,10 +135,14 @@ void draw() {
   if (leftPressed && paddleX > 0) {
     paddleX -= paddleSpeed;
   }
-
-  if (roundStarted) {
-    updateBall();
+  
+  // Block collision debounce
+  if (blockCollisionDebounce) {
+    if (millis() - lastBlockCollision >= collisionCooldown) {
+      blockCollisionDebounce = false;
+    }
   }
+  
   // Starting the game
   if (roundStarted) {
     background(20);
@@ -137,12 +150,17 @@ void draw() {
     fill(255);
     rect(paddleX, paddleY, paddleWidth, paddleHeight, 15);
 
+    updateBall();
     // Create the ball
     circle(ballX, ballY, ballRadius);
 
     // Load the blocks
     for (int i = 0; i <= blockMaxCount - 1; i++) {
 
+      if (!blockAlive[i]) {
+        continue;
+      }
+      
       int col = i % blockColumns;
       int row = i / blockColumns;
 
@@ -176,14 +194,27 @@ void draw() {
         ballY + ballRadius > y &&
         ballY - ballRadius < y + blockHeight
         ) {
-
+        
+        if (blockCollisionDebounce) {
+          return; 
+        }
+          
         // Bounce the ball
         ballSpeedY = -ballSpeedY;
 
         // Destroy the block
         blockAlive[i] = false;
-
-        // Stop checking blocks for this frame
+        blockCount -= 1;
+        blockCollisionDebounce = true;
+        lastBlockCollision = millis();
+        
+        println("Block count: " + blockCount);
+        
+        //if (blockCount <= 0) {
+        // blockCount = 0;
+        // resetBlocks();
+        //}
+        
         break;
       }
     }
