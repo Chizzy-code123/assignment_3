@@ -1,12 +1,12 @@
 /*
    Chizzy
-   I'm making a block breaker type game that I saw on google
-   
-   The mechanics in this game will be
-   - Moving paddle that can hit the moving ball
-   - Rectangles that will increase the player's score if hit
-   - Score
-   - Retry button
+ I'm making a block breaker type game that I saw on google
+ 
+ The mechanics in this game will be
+ - Moving paddle that can hit the moving ball
+ - Rectangles that will increase the player's score if hit
+ - Score
+ - Retry button
  */
 
 // References
@@ -17,6 +17,11 @@ boolean ballInPlay = false;
 
 boolean leftPressed = false;
 boolean rightPressed = false;
+boolean gameOver = false;
+
+int score = 0;
+int maxLives = 1;
+int livesCount = maxLives;
 
 // Buttons
 int startButtonX = 125, startButtonY = 340, startButtonWidth = 350, startButtonHeight = 100;
@@ -26,8 +31,8 @@ int paddleX = 200, paddleY = 480, paddleWidth = 150, paddleHeight = 15;
 int ballX = paddleX + paddleWidth / 2, ballY = paddleY - 25, ballRadius = 25;
 
 // Blocks
-int startBlockX = 40, startBlockY = 40;
-int blockX = startBlockX, blockY = startBlockY, blockWidth = 75, blockHeight = 20, blockRadius = 10;
+int startBlockX = 40, startBlockY = 60;
+int blockX = startBlockX, blockY = startBlockY, blockWidth = 75, blockHeight = 25, blockRadius = 10;
 boolean blocksLoaded = false;
 
 // Configurations
@@ -40,16 +45,20 @@ float lastBlockCollision;
 float collisionCooldown = 250;
 
 int blockMaxCount = 28;
-int blockRows = 4;
 int blockColumns = 7;
-int blockSpacingX = 75, blockSpacingY = 20;
-int blockCount;
+int blockSpacingX = 75, blockSpacingY = 30;
+int blockCount = blockMaxCount;
+int blockPointsWorth = 50;
 
-boolean[] blockAlive = new boolean[28];
+boolean[] blockAlive = new boolean[blockMaxCount];
+
+PImage livesIcon;
+int livesX = 20, livesY = 20;
 
 void setup() {
   size(600, 600);
   background(20);
+  livesIcon = loadImage("love-always-wins.png");
 
   for (int i = 0; i < blockMaxCount; i++) {
     blockAlive[i] = true;
@@ -58,6 +67,9 @@ void setup() {
 
 // Handles ball movement and collision
 void updateBall() {
+  if (gameOver) {
+    return;
+  }
   // Moving the ball
   ballX += ballSpeedX;
   ballY += ballSpeedY;
@@ -88,18 +100,32 @@ void updateBall() {
     float hitOffset = ballX - paddleCenterX;
     float normalizedHit = hitOffset / (paddleWidth / 2.0);
 
-    float maxHorizontalSpeed = 6.0;
+    float maxHorizontalSpeed = 8.0;
     ballSpeedX = normalizedHit * maxHorizontalSpeed;
 
-    float upwardSpeed = 4.5;
+    float upwardSpeed = 5.5;
     ballSpeedY = -upwardSpeed;
 
     ballY = paddleY - ballRadius;
   }
 
+  // Player lost a life
   if (ballY + ballRadius > screenHeight) {
     resetBall();
+
+    livesCount -= 1;
+    if (livesCount <= 0) {
+      gameOver();
+    }
   }
+}
+
+void gameOver() {
+  println("Player has lost all their lives!");
+  livesCount = maxLives;
+  score = 0;
+  resetBlocks();
+  gameOver = true;
 }
 
 void resetBall() {
@@ -111,9 +137,11 @@ void resetBall() {
 }
 
 void resetBlocks() {
+  blockCount = blockMaxCount;
   for (int i = 0; i < blockMaxCount; i++) {
-   blockAlive[i] = true; 
+    blockAlive[i] = true;
   }
+  resetBall();
 }
 
 void draw() {
@@ -135,14 +163,14 @@ void draw() {
   if (leftPressed && paddleX > 0) {
     paddleX -= paddleSpeed;
   }
-  
+
   // Block collision debounce
   if (blockCollisionDebounce) {
     if (millis() - lastBlockCollision >= collisionCooldown) {
       blockCollisionDebounce = false;
     }
   }
-  
+
   // Starting the game
   if (roundStarted) {
     background(20);
@@ -150,7 +178,13 @@ void draw() {
     fill(255);
     rect(paddleX, paddleY, paddleWidth, paddleHeight, 15);
 
+    // Add lives
+    for (int i = 1; i <= livesCount; i++) {
+      image(livesIcon, livesX * i * 2, livesY);
+    }
+
     updateBall();
+
     // Create the ball
     circle(ballX, ballY, ballRadius);
 
@@ -160,15 +194,17 @@ void draw() {
       if (!blockAlive[i]) {
         continue;
       }
-      
+
       int col = i % blockColumns;
       int row = i / blockColumns;
 
-      int x = 40 + col * blockSpacingX;
-      int y = 40 + row * (blockHeight + 10);
+      // Positions
+      int x = startBlockX + col * blockSpacingX;
+      int y = startBlockY + row * blockSpacingY;
 
       fill(210, 198, 45);
 
+      // Setting the colors of the block
       if (i > 0 && i < 7) {
         fill(210, 198, 45);
       } else if (i > 0 && i < 14) {
@@ -179,26 +215,20 @@ void draw() {
         fill(42, 128, 209);
       }
 
-      rect(
-        x,
-        y,
-        blockWidth,
-        blockHeight,
-        10
-        );
-
+      rect(x, y, blockWidth, blockHeight, 10);
       // Collision with the ball
       if (
         ballX + ballRadius > x &&
         ballX - ballRadius < x + blockWidth &&
+
         ballY + ballRadius > y &&
         ballY - ballRadius < y + blockHeight
         ) {
-        
+
         if (blockCollisionDebounce) {
-          return; 
+          return;
         }
-          
+
         // Bounce the ball
         ballSpeedY = -ballSpeedY;
 
@@ -207,27 +237,41 @@ void draw() {
         blockCount -= 1;
         blockCollisionDebounce = true;
         lastBlockCollision = millis();
-        
+        score += blockPointsWorth;
+
         println("Block count: " + blockCount);
-        
-        //if (blockCount <= 0) {
-        // blockCount = 0;
-        // resetBlocks();
-        //}
-        
+
+        // Player got all the blocks
+        if (blockCount <= 0) {
+          blockCount = 0;
+          resetBlocks();
+        }
         break;
       }
     }
+
+    if (gameOver) {
+      background(20);
+      fill(120);
+      rect(150, 150, 300, 350, 12);
+
+      fill(0);
+      textSize(48);
+      text("GAME OVER", 175, 32);
+    }
+    // Score Text
+    textSize(48);
+    fill(255);
+    text("Score: " + score, 40, 560);
   }
 }
 
 // Paddle movement
 void keyPressed() {
-
   // Move the paddle right
-  if (key == 'd' || key == RIGHT) {
+  if (key == 'd' || keyCode == RIGHT) {
     rightPressed = true;
-  } else if (key == 'a' || key == LEFT) {
+  } else if (key == 'a' || keyCode == LEFT) {
     // Move it left
     leftPressed = true;
   }
