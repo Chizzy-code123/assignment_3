@@ -19,13 +19,20 @@ boolean leftPressed = false;
 boolean rightPressed = false;
 boolean gameOver = false;
 
+PFont fontBold;
+PFont fontNormal;
+
 int score = 0;
+int lastScore = score;
+int highscore = score;
 int maxLives = 1;
 int livesCount = maxLives;
 
 // Buttons
 int startButtonX = 125, startButtonY = 340, startButtonWidth = 350, startButtonHeight = 100;
 int paddleX = 200, paddleY = 480, paddleWidth = 150, paddleHeight = 15;
+
+int playAgainX = 100, playAgainY = 410, playAgainWidth = 240, playAgainHeight = 50;
 
 // Bouncing ball
 int ballX = paddleX + paddleWidth / 2, ballY = paddleY - 25, ballRadius = 25;
@@ -59,6 +66,8 @@ void setup() {
   size(600, 600);
   background(20);
   livesIcon = loadImage("love-always-wins.png");
+  fontBold = createFont("Arial Bold", 42);
+  fontNormal = createFont("Arial", 32);
 
   for (int i = 0; i < blockMaxCount; i++) {
     blockAlive[i] = true;
@@ -123,9 +132,11 @@ void updateBall() {
 void gameOver() {
   println("Player has lost all their lives!");
   livesCount = maxLives;
-  score = 0;
   resetBlocks();
   gameOver = true;
+  roundStarted = false;
+  lastScore = score;
+  score = 0;
 }
 
 void resetBall() {
@@ -137,6 +148,7 @@ void resetBall() {
 }
 
 void resetBlocks() {
+  strokeWeight(0);
   blockCount = blockMaxCount;
   for (int i = 0; i < blockMaxCount; i++) {
     blockAlive[i] = true;
@@ -150,29 +162,29 @@ void draw() {
   fill(255);
   text("Block Breaker", 125, 100);
 
-  rect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 15);
-  textSize(55);
-  fill(0);
-  text("Start", 235, 410);
-
-  // Paddle movement
-  if (rightPressed && paddleX < screenWidth - paddleWidth) {
-    paddleX += paddleSpeed;
+  if (!roundStarted && !gameOver) {
+    rect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 15);
+    textSize(55);
+    fill(0);
+    text("Start", 235, 410);
   }
-
-  if (leftPressed && paddleX > 0) {
-    paddleX -= paddleSpeed;
-  }
-
-  // Block collision debounce
-  if (blockCollisionDebounce) {
-    if (millis() - lastBlockCollision >= collisionCooldown) {
-      blockCollisionDebounce = false;
-    }
-  }
-
   // Starting the game
   if (roundStarted) {
+    // Paddle movement
+    if (rightPressed && paddleX < screenWidth - paddleWidth) {
+      paddleX += paddleSpeed;
+    }
+
+    if (leftPressed && paddleX > 0) {
+      paddleX -= paddleSpeed;
+    }
+
+    // Block collision debounce
+    if (blockCollisionDebounce) {
+      if (millis() - lastBlockCollision >= collisionCooldown) {
+        blockCollisionDebounce = false;
+      }
+    }
     background(20);
     // Create the paddle
     fill(255);
@@ -194,7 +206,6 @@ void draw() {
       if (!blockAlive[i]) {
         continue;
       }
-
       int col = i % blockColumns;
       int row = i / blockColumns;
 
@@ -253,14 +264,29 @@ void draw() {
     if (gameOver) {
       background(20);
       fill(120);
-      rect(150, 150, 300, 350, 12);
+      rect(100, 150, 350, 250, 12);
 
+      fill(255);
+      textFont(fontBold);
+      text("GAME OVER", 135, 225);
+
+      textSize(20);
+      // Show the score
+      text("Score", 150, 320);
+      text(lastScore, 165, 345);
+
+      // Highscore
+      text("Highscore", 265, 320);
+      text(score, 300, 345);
+
+      // Create "Play again" button
+      rect(playAgainX, playAgainY, playAgainWidth, playAgainHeight, 15);
       fill(0);
-      textSize(48);
-      text("GAME OVER", 175, 32);
+      textSize(32);
+      text("Play Again", 145, 445);
     }
+    textFont(fontNormal);
     // Score Text
-    textSize(48);
     fill(255);
     text("Score: " + score, 40, 560);
   }
@@ -286,13 +312,24 @@ void keyReleased() {
 }
 
 void mousePressed() {
-  if (roundStarted) {
-    return;
-  }
+
+  print("MouseX: " + mouseX + " ");
+  print("MouseY " + mouseY);
+
+  // Start button
   if (mouseX >= startButtonX &&
     mouseX <= startButtonX + startButtonWidth &&
     mouseY >= startButtonY &&
-    mouseY <= startButtonY + startButtonHeight) {
+    mouseY <= startButtonY + startButtonHeight && !roundStarted) {
     roundStarted = true;
+  }
+
+  // Pressed play again
+  if (mouseX >= playAgainX && mouseX <= playAgainX + playAgainWidth
+    && mouseY >= playAgainY && mouseY <= playAgainY + playAgainHeight
+    && gameOver) {
+    roundStarted = true;
+    gameOver = false;
+    println("Playing again");
   }
 }
