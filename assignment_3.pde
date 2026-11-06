@@ -32,7 +32,7 @@ int livesCount = maxLives;
 int startButtonX = 125, startButtonY = 340, startButtonWidth = 350, startButtonHeight = 100;
 int paddleX = 200, paddleY = 480, paddleWidth = 150, paddleHeight = 15;
 
-int playAgainX = 100, playAgainY = 410, playAgainWidth = 240, playAgainHeight = 50;
+int playAgainX = 150, playAgainY = 410, playAgainWidth = 240, playAgainHeight = 50;
 
 // Bouncing ball
 int ballX = paddleX + paddleWidth / 2, ballY = paddleY - 25, ballRadius = 25;
@@ -109,10 +109,10 @@ void updateBall() {
     float hitOffset = ballX - paddleCenterX;
     float normalizedHit = hitOffset / (paddleWidth / 2.0);
 
-    float maxHorizontalSpeed = 8.0;
+    float maxHorizontalSpeed = 6.0;
     ballSpeedX = normalizedHit * maxHorizontalSpeed;
 
-    float upwardSpeed = 5.5;
+    float upwardSpeed = 6.0;
     ballSpeedY = -upwardSpeed;
 
     ballY = paddleY - ballRadius;
@@ -157,12 +157,12 @@ void resetBlocks() {
 }
 
 void draw() {
-  // Title
-  textSize(64);
-  fill(255);
-  text("Block Breaker", 125, 100);
 
   if (!roundStarted && !gameOver) {
+    // Title
+    textSize(64);
+    fill(255);
+    text("Block Breaker", 125, 100);
     rect(startButtonX, startButtonY, startButtonWidth, startButtonHeight, 15);
     textSize(55);
     fill(0);
@@ -199,9 +199,14 @@ void draw() {
 
     // Create the ball
     circle(ballX, ballY, ballRadius);
+    textFont(fontNormal);
+
+    // Score Text
+    fill(255);
+    text(score, 275, 40);
 
     // Load the blocks
-    for (int i = 0; i <= blockMaxCount - 1; i++) {
+    for (int i = 0; i < blockMaxCount; i++) {
 
       if (!blockAlive[i]) {
         continue;
@@ -212,18 +217,26 @@ void draw() {
       // Positions
       int x = startBlockX + col * blockSpacingX;
       int y = startBlockY + row * blockSpacingY;
-
       fill(210, 198, 45);
 
       // Setting the colors of the block
-      if (i > 0 && i < 7) {
+      strokeWeight(3);
+      if (i >= 0 && i < 7) {
+        // Yellow
         fill(210, 198, 45);
+        stroke(158, 138, 24);
       } else if (i > 0 && i < 14) {
-        fill(0, 133, 18);
+        // Green
+        fill(2, 161, 23);
+        stroke(7, 140, 25);
       } else if (i > 0 && i < 21) {
+        // Red
         fill(255, 59, 59);
+        stroke(209, 44, 44);
       } else if (i > 0 && i < 28) {
+        // Blue
         fill(42, 128, 209);
+        stroke(40, 100, 156);
       }
 
       rect(x, y, blockWidth, blockHeight, 10);
@@ -242,6 +255,7 @@ void draw() {
 
         // Bounce the ball
         ballSpeedY = -ballSpeedY;
+        ballSpeedX = -ballSpeedX;
 
         // Destroy the block
         blockAlive[i] = false;
@@ -272,41 +286,37 @@ void draw() {
 
       textSize(20);
       // Show the score
-      text("Score", 150, 320);
-      text(lastScore, 165, 345);
+      text("Score", 170, 320);
+      text(lastScore, 185, 345);
 
       // Highscore
-      text("Highscore", 265, 320);
-      text(score, 300, 345);
+      text("Highscore", 285, 320);
+      text(score, 320, 345);
 
       // Create "Play again" button
       rect(playAgainX, playAgainY, playAgainWidth, playAgainHeight, 15);
       fill(0);
       textSize(32);
-      text("Play Again", 145, 445);
+      text("Play Again", 195, 445);
     }
-    textFont(fontNormal);
-    // Score Text
-    fill(255);
-    text("Score: " + score, 40, 560);
   }
 }
 
 // Paddle movement
 void keyPressed() {
   // Move the paddle right
-  if (key == 'd' || keyCode == RIGHT) {
+  if (Character.toLowerCase(key) == 'd' || keyCode == RIGHT) {
     rightPressed = true;
-  } else if (key == 'a' || keyCode == LEFT) {
+  } else if (Character.toLowerCase(key) == 'a' || keyCode == LEFT) {
     // Move it left
     leftPressed = true;
   }
 }
 
 void keyReleased() {
-  if (key == 'a' || key == LEFT) {
+  if (Character.toLowerCase(key) == 'a' || keyCode == LEFT) {
     leftPressed = false;
-  } else if (key == 'd' || key == RIGHT) {
+  } else if (Character.toLowerCase(key) == 'd' || keyCode == RIGHT) {
     rightPressed = false;
   }
 }
